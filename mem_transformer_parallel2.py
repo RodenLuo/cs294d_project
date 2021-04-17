@@ -458,9 +458,10 @@ class RelPartialLearnableDecoderLayerParallel2(nn.Module):
                                attn_mask=dec_attn_mask,
                                mems=mems)
 
-        output = self.parallel2_net(torch.cat((output1, output2), -1))
+        output1 = self.pos_ff(output1)
+        output2 = self.pos_ff(output2)
 
-        output = self.pos_ff(output)
+        output = self.parallel2_net(torch.cat((output1, output2), -1))
 
         return output
 
