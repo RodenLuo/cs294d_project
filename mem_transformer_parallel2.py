@@ -442,8 +442,6 @@ class RelPartialLearnableDecoderLayerParallel2(nn.Module):
         self.dec_attn2 = RelPartialLearnableMultiHeadAttn(n_head, d_model,
                                                           d_head, dropout, **kwargs)
 
-        self.parallel2_net = nn.Linear(d_model * 2, d_model, bias=False)
-
         self.pos_ff = PositionwiseFF(d_model, d_inner, dropout,
                                      pre_lnorm=kwargs.get('pre_lnorm'))
 
@@ -458,10 +456,9 @@ class RelPartialLearnableDecoderLayerParallel2(nn.Module):
                                attn_mask=dec_attn_mask,
                                mems=mems)
 
-        output1 = self.pos_ff(output1)
-        output2 = self.pos_ff(output2)
+        output = (output1 + output2) / 2
 
-        output = self.parallel2_net(torch.cat((output1, output2), -1))
+        output = self.pos_ff(output)
 
         return output
 
