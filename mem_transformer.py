@@ -375,6 +375,8 @@ class RelLearnableMultiHeadAttn(RelMultiHeadAttn):
 
         return output
 
+
+##    attention type =2 3
 class DecoderLayer(nn.Module):
     def __init__(self, n_head, d_model, d_head, d_inner, dropout, **kwargs):
         super(DecoderLayer, self).__init__()
@@ -390,7 +392,7 @@ class DecoderLayer(nn.Module):
         output = self.pos_ff(output)
 
         return output
-
+# attention type =1
 class RelLearnableDecoderLayer(nn.Module):
     def __init__(self, n_head, d_model, d_head, d_inner, dropout,
                  **kwargs):
@@ -409,7 +411,7 @@ class RelLearnableDecoderLayer(nn.Module):
         output = self.pos_ff(output)
 
         return output
-
+# attention type =0
 class RelPartialLearnableDecoderLayer(nn.Module):
     def __init__(self, n_head, d_model, d_head, d_inner, dropout,
                  **kwargs):
@@ -425,6 +427,39 @@ class RelPartialLearnableDecoderLayer(nn.Module):
         output = self.dec_attn(dec_inp, r, r_w_bias, r_r_bias,
                                attn_mask=dec_attn_mask,
                                mems=mems)
+        output = self.pos_ff(output)
+
+        return output
+
+
+class RelPartialLearnableDecoderLayerParallel2(nn.Module):
+    def __init__(self, n_head, d_model, d_head, d_inner, dropout,
+                 **kwargs):
+        super(RelPartialLearnableDecoderLayer, self).__init__()
+
+        self.dec_attn1 = RelPartialLearnableMultiHeadAttn(n_head, d_model,
+                            d_head, dropout, **kwargs)
+        self.dec_attn2 = RelPartialLearnableMultiHeadAttn(n_head, d_model,
+                                                          d_head, dropout, **kwargs)
+
+        self.parallel2_net = nn.Linear(d_model * 2, d_model, bias=False)
+
+        self.pos_ff = PositionwiseFF(d_model, d_inner, dropout,
+                                     pre_lnorm=kwargs.get('pre_lnorm'))
+
+
+    def forward(self, dec_inp, r, r_w_bias, r_r_bias, dec_attn_mask=None, mems=None):
+
+        output1 = self.dec_attn1(dec_inp, r, r_w_bias, r_r_bias,
+                               attn_mask=dec_attn_mask,
+                               mems=mems)
+
+        output2 = self.dec_attn2(dec_inp, r, r_w_bias, r_r_bias,
+                               attn_mask=dec_attn_mask,
+                               mems=mems)
+
+        output = self.parallel2_net(torch.cat((output1, output2), -1))
+
         output = self.pos_ff(output)
 
         return output
@@ -527,7 +562,7 @@ class MemTransformerLM(nn.Module):
         if attn_type == 0: # the default attention
             for i in range(n_layer):
                 self.layers.append(
-                    RelPartialLearnableDecoderLayer(
+                    RelPartialLearnableDecoderLayerParallel2(
                         n_head, d_model, d_head, d_inner, dropout,
                         tgt_len=tgt_len, ext_len=ext_len, mem_len=mem_len,
                         dropatt=dropatt, pre_lnorm=pre_lnorm)
