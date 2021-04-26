@@ -400,10 +400,12 @@ def evaluate(eval_iter):
     total_len, total_loss = 0, 0.
     with torch.no_grad():
         mems = tuple()
+        mems_mart = tuple()
+
         for i, (data, target, seq_len) in enumerate(eval_iter):
             if args.max_eval_steps > 0 and i >= args.max_eval_steps:
                 break
-            ret = model(data, target, *mems)
+            ret, mems_mart = para_model(data, target, mems, mems_mart)
             loss, mems = ret[0], ret[1:]
             loss = loss.mean()
             total_loss += seq_len * loss.float().item()
@@ -494,7 +496,7 @@ def train():
             train_loss = 0
             log_start_time = time.time()
 
-        if train_step % args.eval_interval == 0:
+        if train_step % args.eval_interval == 1:
             val_loss = evaluate(va_iter)
             logging('-' * 100)
             log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \

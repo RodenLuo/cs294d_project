@@ -496,7 +496,7 @@ def train():
             train_loss = 0
             log_start_time = time.time()
 
-        if train_step % args.eval_interval == 0:
+        if train_step % args.eval_interval == 1:
             val_loss = evaluate(va_iter)
             logging('-' * 100)
             log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \

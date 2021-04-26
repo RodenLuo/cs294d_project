@@ -212,10 +212,10 @@ class MultiHeadAttn_mart(nn.Module):
 
         if self.pre_lnorm:
             ##### residual connection
-            output = h + attn_out
+            output = mems_mart + attn_out
         else:
             ##### residual connection + layer normalization
-            output = self.layer_norm(h + attn_out)
+            output = self.layer_norm(mems_mart + attn_out)
 
         return output
 
